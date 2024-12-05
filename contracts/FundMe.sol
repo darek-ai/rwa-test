@@ -68,6 +68,6 @@ contract FundMe {
         returns (uint256)
     {
         uint256 ethPrice = uint256(getChainlinkDataFeedLatestAnswer());
-        return (ethPrice * ethAmount) / 10**8;
+        return (ethPrice * ethAmount) / (10**8);
     }
 }
