@@ -18,14 +18,20 @@ contract FundMe {
      *
      */
 
+    // 喂价接口
+    AggregatorV3Interface internal dataFeed;
+
     // 定义一个HashMap：储存投资人钱包地址及对应投资金额
     mapping(address => uint256) public fundersToAmount;
 
-    // 定义最小投资金额为：10^18 USD
-    uint256 MIN_VALUE = 100 * 10**18;
+    // 定义最小投资金额为：10 USD
+    uint256 constant MIN_VALUE = 10 * 10**18;
 
-    // 喂价接口
-    AggregatorV3Interface internal dataFeed;
+    // 账户余额不能低于阈值: 100 USD
+    uint256 constant TARGET = 100 * 10**18;
+
+    // 定义合约拥有者
+    address public owner;
 
     /**
      * Network: Sepolia TestNet
@@ -37,6 +43,9 @@ contract FundMe {
         dataFeed = AggregatorV3Interface(
             0x694AA1769357215DE4FAC081bf1f309aDC325306
         );
+
+        // 当前合约部署者
+        owner = msg.sender;
     }
 
     // payable 关键字 标记该方法可接收链上原生通证，比如以太坊连上的以太币ETH
@@ -62,6 +71,10 @@ contract FundMe {
         return answer;
     }
 
+    /**
+     * ETH 转 USD
+     *
+     */
     function convertEthToUsd(uint256 ethAmount)
         internal
         view
@@ -69,5 +82,27 @@ contract FundMe {
     {
         uint256 ethPrice = uint256(getChainlinkDataFeedLatestAnswer());
         return (ethPrice * ethAmount) / (10**8);
+    }
+
+    /**
+     * 转让合约所有权，变更合约拥有者
+     */
+    function transferOwnerShip(address newOwner) public {
+        require(msg.sender == owner, "Only the contract owner can call");
+        owner = newOwner;
+    }
+
+    /**
+     * 提款函数
+     */
+    function fetchFund() external {
+        // 校验当前钱包余额是否充足
+        require(
+            convertEthToUsd(address(this).balance) >= TARGET,
+            "Insufficient wallet balance"
+        );
+        require(msg.sender == owner, "Only the contract owner can call");
+
+        payable(msg.sender).transfer(address(this).balance);
     }
 }
